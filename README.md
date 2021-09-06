@@ -193,3 +193,87 @@ context.code — server response code (also included in HTTP headers), can retur
 500 or 503 in case of a server error (it makes sense to wait and repeat the same request or open a ticket at https://github.com/Blockchair/Blockchair.Support/issues/new or write to info@blockchair.com)
 context.error — error description in the case there's an error
 context.state — number of the latest known block (e.g., for all requests to endpoints connected to the Bitcoin blockchain this will yield the latest block number for Bitcoin). For
+for Bitcoin). For example, it may be useful to calculate the number of network сonfirmations, or correctly iterate trough the results using ?offset=. Not returned if the request has failed.
+context.state_layer_2 — the latest block number for which our engine has processed second layer (e.g. ERC-20) transactions. If it's less than the block id in your current environment (e.g. block id of a transaction you requested), it makes sense to repeat the request after some time to retrieve second layer data. With our current architecture it always equals to context.state, but that may change in future.
+context.results — contains the number of found results (dashboard and raw endpoints)
+context.limit — applied limit to the number of results (the default one or user set in the ?limit= query section)
+context.offset — applied offset (the default one or user set in the ?offset= query section)
+context.rows — contains the number of shown rows returned from the database (infinitable endpoints)
+context.total_rows — total number of rows meeting the request (infinitable endpoints)
+context.api — array of data on the status of the API:
+context.api.version — version of API
+context.api.last_major_update — timestamp of the last update, that somehow has broken backward compatibility for "stable" endpoints
+context.api.next_major_update — timestamp of the next scheduled update, that can break compatibility, or null, if there are no updates scheduled
+context.api.documentation — an URL to the latest version of documentation
+context.api.notice — just a text notice which, for example, may describe upcoming changes (this is an optional field)
+context.cache — array of info on whether the response comes from the cache or not
+context.cache.live — false if the response comes from the cache, true otherwise
+context.cache.until — cache expiry timestamp
+context.request_cost — API request cost (1 for ordinary queries, more than 1 for complex requests, see the next section for details)
+There are also some things which are the same across all endpoints:
+
+All timestamps are in the UTC timezone, and have the following format: YYYY-MM-DD hh:ii:ss . If you require an ISO 8601 timestamp with the timezone, just replace the space with a T, and append Z to the timestamp (e.g. 2009-01-03 18:15:05 will then become 2009-01-03T18:15:05Z)
+There are some endpoints allowing you to request data in formats other than JSON (e.g. TSV or CSV). In that case, the API returns plain output data in the desired format without metadata
+Most of the responses are cached for some amount of time. Bypassing cache is allowed in some of our Premium API plans (see the next documentation section)
+API rate limits, API keys, and Premium API
+While we do allow to perform some amount of requests free of charge, generally our API is not free to use.
+
+Here's our policy:
+
+If you use our API occasionally for personal use or testing up to 1440 requests a day (1 request a minute in average) — a key is not required
+Non-commercial and academic projects which require up to 1440 requests a day — a key is not required
+Non-commercial and academic projects requiring more than 1440 requests a day should apply for a Premium API key, and are subject to a discount up to 50%
+Non-commercial and academic projects requiring more than 1440 requests a day which are also Blockchair partners are subject to a discount up to 100%
+Commercial projects should apply for a key to Premium API not depending on the required number of requests
+Commercial projects which are also Blockchair partners (e.g. linking to Blockchair from the app's interface) are subject to a discount up to 10%
+Up to 1440 requests a day	More than 1440 requests a day
+Personal or testing	Key is not needed	Key is required
+Non-commercial or academic	Key is not needed	Key is required, up to 100% discount
+Commercial	Key is required	Key is required, up to 10% discount
+Our Premium API plans are available here: https://blockchair.com/api/plans, please contact us if you have any questions or would like to have a custom plan.
+
+The daily request counter is reset at 00:00 UTC every day.
+
+There's an additional hard limit of 30 requests per minute on the free plan.
+
+If you exceed the limit, an error 402 or 429 will be returned. On some of our Premium API plans it's possible to "borrow" requests from the next day if you hit the limit (if your daily limit is n and you hit it, n more requests will be added to the limit for 1 day, you will be notified, and your subscription period will shrink by 1 day) — this behavior is turned off by default.
+
+There's an additional soft limit of 5 requests per second on both free and paid plans. This limit is applied only if we experience a very high load on our servers, and it's turned on and off manually by our admins. In case you hit this limit, an error 435 will be returned.
+
+If you have exceeded the limit multiple times without using a key, an error 430, 434, or 503 may be returned meaning that you've been blocked. It's also possible to get automatically blocked without exceeding the limit in case we're seeing botnet usage in order to bypass the limit. If you've been blocked and you believe you haven't abused our API above the limit, please contact us. If you're using a valid API key it's not possible to get blocked; if you've been previously blocked and starting to use a key, you'll get automatically unblocked.
+
+Please note that some of API requests may "cost" more than 1 request. Here's an example:
+
+https://api.blockchair.com/bitcoin/dashboards/block/0 — requesting information about one block via one request "costs" 1 request
+https://api.blockchair.com/bitcoin/dashboards/blocks/0,1,2,3,4,5,6,7,8,9 — requesting information about ten blocks via one request "costs" 1.9 requests
+Every API endpoint documentation has the "Request cost formula" section describing how the "cost" is calculated. For most API requests it's always 1. It's more than 1 in cases when you're requiring additional data (e.g. when you're requesting data on an Ethereum address, and you're also requesting its ERC-20 token balances).
+
+Every API response yields context.request_cost with the request cost number ("request points").
+
+As a kindly reminder, there are tasks such as extracting lots of blockchain data (e.g. all transactions over a 2 month period) which require lots of requests done — it may be better to use our Database dumps feature instead of the API (see https://blockchair.com/dumps for documentation)
+
+What are the steps to acquire an API key?
+
+Our Premium API dashboard is available here: https://api.blockchair.com/premium
+
+First, you need to choose a suitable plan: https://blockchair.com/api/plans
+
+At the moment, this automated system accepts PayPal payments only (which also allows you to pay with your card). If you'd like to pay via wire transfer or crypto, please contact us at info@blockchair.com
+
+Once you've paid, you will receive a one-time password which can be used to generate and activate your API key. Enter it on this page into the "I want to activate an API key I've just purchased..." form, then fill in a small form about yourself, and you'll get the key.
+
+After you have received a key, you can track your stats and extend your subscription. Enter your API key on this page into the "I already have an API key and would like to see some stats or extend my subscription..." form. If you'd like to extend your subscription, you'd need to buy a one-time extension password and enter it on your key management page.
+
+If you have any questions about how to buy and use your key, you can always contact us.
+
+In order to use an API key, you need to append ?key={:api_key} or &key={:api_key} to the end of request URLs. You should use ? if there are no other parameters in the URL, and & otherwise. Here are three examples of correct URLs with a key:
+
+https://api.blockchair.com/bitcoin/dashboards/block/0?key=myfirstpasswordwas4321andifeltsmartaboutit
+
+https://api.blockchair.com/bitcoin/dashboards/block/0?limit=0&key=myfirstpasswordwas4321andifeltsmartaboutit
+
+https://api.blockchair.com/bitcoin/dashboards/block/0?key=myfirstpasswordwas4321andifeltsmartaboutit&limit=0
+
+There's an extra API endpoint for those who have an API key allowing to track the number of request made.
+
+API versioning and changelog
