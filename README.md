@@ -170,3 +170,26 @@ Requests to the API should be made through the HTTPS protocol by GET requests to
 
 > curl 'https://api.blockchair.com/bitcoin/blocks?a=sum(generation)'
 {"data":[{"sum(generation)":1800957104497237}],"context":{"code":200
+code":200,"source":"A","time":0.007825851440429688,"limit":10000,"offset":null,"rows":1,"pre_rows":1,"total_rows":1,"state":600767,"cache":{"live":true,"duration":60,"since":"2019-10-23 21:33:00","until":"2019-10-23 21:34:00","time":null},"api":{"version":"2.0.38","last_major_update":"2019-07-19 18:07:19","next_major_update":null,"documentation":"https:\/\/github.com\/Blockchair\/Blockchair.Support\/blob\/master\/API.md","notice":"Beginning July 19th, 2019 all applications using Blockchair API on a constant basis should apply for an API key (mailto:info@blockchair.com)"}}}
+Here are some considerations:
+
+If you're building a web app, your users shouldn't make direct API requests from there. While we don't have any limitations in our CORS policy (API currently responds with a Access-Control-Allow-Origin: * header), that policy may be changed in the future without any warnings
+Please don't use some random keys in your requests (e.g. ?random_key=random_value) as this can result in a 400 error (though we don't force this rule at the moment for most of our endpoints)
+If you're using the API with an API key, you should keep it in secret. In order to build an app for public use using our API, you should build a proxy, so the requrst flow will look like the following: user → https://your-proxy/{:request_string} → https://api.blockchair.com/{:request_string}?key={:api_key} — that way you won't disclose the key to your users
+The only exception to the "requests should be made using GET" rule is the Broadcasting transactions endpoint accepting POST requests
+Basic API response
+API returns JSON-encoded data. Typically, the response is an array consisting of two subarrays:
+
+data — contains the data you requested
+
+context — contains some metadata, e.g. a status code, query execution time, used options, etc. Here are some of it (note that not all endpoints return all of the keys listed here):
+
+context.code — server response code (also included in HTTP headers), can return:
+200 if the request succeeded
+400 if there is a user error in the request
+404 for some endpoints in case there's no results (this behavior is deprecated), also if you're requesting non-existing endpoint
+402, 429, 435, 436, or 437 if any limit on the number or complexity of requests is exceeded (see the list of limits, and please contact us if you'd like to increase them) — your IP address will be unblocked automatically after some time
+430, 434, or 503 if your IP address is temporarily blocked
+500 or 503 in case of a server error (it makes sense to wait and repeat the same request or open a ticket at https://github.com/Blockchair/Blockchair.Support/issues/new or write to info@blockchair.com)
+context.error — error description in the case there's an error
+context.state — number of the latest known block (e.g., for all requests to endpoints connected to the Bitcoin blockchain this will yield the latest block number for Bitcoin). For
